@@ -1,0 +1,50 @@
+// Keep one installable JAR. Auxiliary archives have their own directory.
+import org.gradle.jvm.tasks.Jar
+import java.nio.file.Files
+
+def artifact = tasks.named(rollingJarTask, Jar)
+def gitHead = providers.exec {
+    commandLine('git', 'rev-parse', 'HEAD')
+    ignoreExitValue = true
+}
+// A checkout without commits (or without git) still builds: the manifest then says "unknown".
+def sourceCommit = providers.environmentVariable('GITHUB_SHA')
+    .orElse(gitHead.standardOutput.asText.map { it.trim() })
+    .map { it.isEmpty() || it.startsWith('HEAD') ? 'unknown' : it }
+
+tasks.withType(Jar).configureEach { archive ->
+    if (archive.name != rollingJarTask) {
+        archive.destinationDirectory.set(layout.buildDirectory.dir('intermediates/jars'))
+        archive.archiveFileName.set("${project.name}-${archive.name}.jar")
+    }
+}
+
+def cleanOldPluginJars = tasks.register('cleanOldPluginJars') {
+    onlyIf {
+        def jar = artifact.get()
+        jar.state.executed && jar.state.failure == null && jar.archiveFile.get().asFile.isFile()
+    }
+    doLast {
+        def directories = [layout.buildDirectory.dir('libs').get().asFile]
+        def keep = artifact.get().archiveFile.get().asFile.canonicalFile
+        def workspace = rootProject.projectDir.canonicalFile.toPath()
+        directories.each { directory ->
+            def resolved = directory.canonicalFile
+            if (!resolved.toPath().startsWith(workspace) || resolved.name != 'libs' || resolved.parentFile.name != 'build') {
+                throw new GradleException("Refusing cleanup outside project build/libs: ${resolved}")
+            }
+            resolved.listFiles()?.findAll { it.isFile() && it.name.endsWith('.jar') && it.canonicalFile != keep }
+                ?.each { Files.delete(it.toPath()) }
+        }
+    }
+}
+
+artifact.configure {
+    destinationDirectory.set(layout.buildDirectory.dir('libs'))
+    archiveFileName.set(rollingJarName)
+    inputs.property('sourceCommit', sourceCommit)
+    manifest.attributes('Implementation-Version': project.version.toString(), 'Build-Commit': sourceCommit.get())
+    // A failed check leaves the previous installable JAR untouched.
+    dependsOn(tasks.named('check'))
+    finalizedBy(cleanOldPluginJars)
+}
