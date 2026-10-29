@@ -1,0 +1,74 @@
+# HeavenlyDonateNotify — предупреждения игрокам об окончании временной привилегии Sponsor.
+# Плагин только читает LuckPerms на прокси и ничего не меняет в группах, правах и сроках.
+
+groups:
+  # Отслеживаемая группа LuckPerms.
+  sponsor: sponsor
+  # Группа, о которой говорится «После окончания у вас останется Premium».
+  # Учитывается только независимое бессрочное назначение, а не наследование sponsor -> premium.
+  premium: premium
+  # Группы обычного игрока. Если после Sponsor останутся только они, показывается remaining.ordinary;
+  # если останется что-то ещё (например, персонал) — нейтральный текст remaining.neutral.
+  ordinary:
+    - default
+
+# За сколько до окончания предупреждать. Единицы: d — дни, h — часы, m — минуты, s — секунды.
+# Если игрок пропустил несколько порогов, отправляется только самый близкий к окончанию.
+thresholds:
+  - 3d
+  - 24h
+  - 1h
+
+checks:
+  # Задержка проверки после подключения игрока к игровому серверу.
+  login-delay: 10s
+  # Период проверки игроков онлайн.
+  interval: 60s
+  # Отправлять только когда LimboAuth загружен и готов. Без него Velocity пускает игроков
+  # без пароля, и подключение к игровому серверу не доказывает вход.
+  # false — для сети без LimboAuth: достаточно подключения к игровому серверу.
+  require-limboauth: true
+
+history:
+  # Сколько хранить историю уведомлений и отслеживаемых сроков (локальный SQLite history.db).
+  retention: 90d
+
+time:
+  zone: Europe/Moscow
+  zone-label: МСК
+  # Формат даты окончания (java DateTimeFormatter, русская локаль).
+  date-format: "d MMMM 'в' HH:mm"
+  # Формат, если окончание в другом году.
+  date-format-other-year: "d MMMM yyyy 'в' HH:mm"
+
+shop:
+  # Адрес магазина для кнопки «Продлить». Пусто — кнопка скрыта.
+  url: ""
+
+messages:
+  privilege-name: Sponsor
+  # Плейсхолдеры: <player>, <privilege>, <remaining>, <end_date>, <remaining_status>, <renew_button>, <shop_url>.
+  # Строка, которая после подстановки окажется пустой (например, скрытая кнопка), не выводится.
+  warning: |
+    <color:#953EB2>Срок вашего <privilege> истечёт через <remaining>.</color>
+    <color:#D6D6D6>Окончание: <end_date>.</color>
+    <color:#D6D6D6><remaining_status></color>
+    <renew_button>
+  expired: |
+    <color:#953EB2>Срок вашего <privilege> истёк.</color>
+    <color:#D6D6D6>Окончание: <end_date>.</color>
+    <color:#D6D6D6><remaining_status></color>
+    <renew_button>
+  # Что останется после Sponsor — для предупреждений до окончания.
+  remaining:
+    premium: "После окончания у вас останется Premium."
+    ordinary: "После окончания вы станете обычным игроком."
+    neutral: "После окончания возможности Sponsor станут недоступны."
+  # Те же три случая для сообщения об уже наступившем окончании.
+  remaining-expired:
+    premium: "У вас остаётся Premium."
+    ordinary: "Теперь вы обычный игрок."
+    neutral: "Возможности Sponsor больше недоступны."
+  renew-button:
+    text: "<color:#953EB2><bold>[Продлить <privilege>]</bold></color>"
+    hover: "<color:#D6D6D6>Открыть магазин: <shop_url>"
