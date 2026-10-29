@@ -55,7 +55,8 @@ class NotificationEngineTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        settings = new ActiveSettings(SettingsLoader.defaults());
+        // Сценарии написаны под пороги 3d/24h/1h; значения по умолчанию в config.yml могут отличаться.
+        settings = new ActiveSettings(SettingsLoader.parse("thresholds: [3d, 24h, 1h]\n"));
         store = new SqliteHistoryStore(directory.resolve("history.db"));
         engine = engine(store);
     }

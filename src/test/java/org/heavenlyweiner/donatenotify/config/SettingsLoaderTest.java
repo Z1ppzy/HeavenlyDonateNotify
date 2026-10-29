@@ -25,7 +25,7 @@ class SettingsLoaderTest {
         assertEquals("sponsor", settings.sponsorGroup());
         assertEquals("premium", settings.premiumGroup());
         assertEquals(Set.of("default"), settings.ordinaryGroups());
-        assertEquals("3d, 24h, 1h", settings.thresholds().describe());
+        assertEquals("3d, 1d, 3h, 30m", settings.thresholds().describe());
         assertEquals(Duration.ofSeconds(10), settings.loginDelay());
         assertEquals(Duration.ofSeconds(60), settings.checkInterval());
         assertTrue(settings.requireLimboAuth());
@@ -48,7 +48,7 @@ class SettingsLoaderTest {
 
     @Test
     void empty_file_equals_defaults() throws ConfigException {
-        assertEquals("3d, 24h, 1h", SettingsLoader.parse("").thresholds().describe());
+        assertEquals("3d, 1d, 3h, 30m", SettingsLoader.parse("").thresholds().describe());
     }
 
     @Test
@@ -82,7 +82,7 @@ class SettingsLoaderTest {
         Settings initial = SettingsLoader.load(directory);
         Path file = directory.resolve(SettingsLoader.FILE_NAME);
         assertTrue(Files.exists(file));
-        assertEquals("3d, 24h, 1h", initial.thresholds().describe());
+        assertEquals("3d, 1d, 3h, 30m", initial.thresholds().describe());
 
         ActiveSettings active = new ActiveSettings(initial);
         Files.writeString(file, "thresholds: [2d]\n", StandardCharsets.UTF_8);
