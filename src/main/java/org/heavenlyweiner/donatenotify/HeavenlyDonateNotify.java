@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
@@ -28,6 +29,8 @@ import org.heavenlyweiner.donatenotify.config.ConfigException;
 import org.heavenlyweiner.donatenotify.config.SettingsLoader;
 import org.heavenlyweiner.donatenotify.logic.LogThrottle;
 import org.heavenlyweiner.donatenotify.logic.NotificationEngine;
+import org.heavenlyweiner.donatenotify.logic.PrivilegeSummary;
+import org.heavenlyweiner.donatenotify.logic.SponsorAccess;
 import org.heavenlyweiner.donatenotify.login.LimboAuthProbe;
 import org.heavenlyweiner.donatenotify.login.LoginGate;
 import org.heavenlyweiner.donatenotify.luckperms.LuckPermsSource;
@@ -158,6 +161,22 @@ public final class HeavenlyDonateNotify {
         if (player == null || gate.verdict(player) != LoginGate.Verdict.ALLOW) return false;
         player.sendMessage(message);
         return true;
+    }
+
+    /**
+     * API для других плагинов прокси (например, GuiOkVelocity): привилегия игрока по данным LuckPerms
+     * в виде карты {@code kind} ({@code PERMANENT}, {@code TEMPORARY}, {@code NONE}, {@code UNKNOWN}),
+     * {@code group} и {@code expiry} (секунды epoch, только для {@code TEMPORARY}). Карта не содержит
+     * типов плагина, поэтому метод можно вызывать отражением. Вызывать вне event loop: игрок,
+     * которого LuckPerms не держит в памяти, подгружается из базы с таймаутом.
+     */
+    public Map<String, Object> privilege(UUID uuid) {
+        if (source == null || settings == null) return PrivilegeSummary.unknown().toMap();
+        LuckPermsSource.Result data = source.snapshot(uuid, server.getPlayer(uuid).map(Player::getUsername).orElse(null));
+        if (!data.ok()) return PrivilegeSummary.unknown().toMap();
+        ActiveSettings.Bundle bundle = settings.current();
+        SponsorAccess access = bundle.evaluator().evaluate(data.snapshot(), clock.instant());
+        return PrivilegeSummary.of(access, bundle.settings().sponsorGroup(), bundle.settings().premiumGroup()).toMap();
     }
 
     @Subscribe
